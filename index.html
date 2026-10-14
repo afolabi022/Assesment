@@ -1,0 +1,223 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Shell Graduate Assessment Practice</title>
+<style>
+:root{--ink:#1c1c21;--mute:#5d6068;--bg:#f2f3f5;--card:#fff;--line:#d9dbe0;--red:#dd1d21;--yel:#fbce07;--ok:#157a3d;--bad:#b3261e}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.55 system-ui,-apple-system,"Segoe UI",sans-serif}
+h1,h2,h3{font-family:Georgia,"Times New Roman",serif;line-height:1.2;margin:0 0 .5em}
+h1{font-size:2rem}h2{font-size:1.45rem}h3{font-size:1.1rem}
+header{background:var(--yel);border-bottom:4px solid var(--red);padding:14px 20px;display:flex;gap:16px;align-items:center;flex-wrap:wrap}
+header b{font-family:Georgia,serif;font-size:1.15rem;margin-right:auto}
+nav button{background:none;border:0;font:inherit;font-weight:600;padding:6px 12px;cursor:pointer;border-radius:6px;color:var(--ink)}
+nav button.on{background:var(--ink);color:#fff}
+main{max-width:760px;margin:0 auto;padding:24px 18px 60px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:20px;margin-bottom:16px}
+button.p,button.s{font:inherit;font-weight:600;padding:10px 18px;border-radius:8px;cursor:pointer;border:2px solid var(--ink)}
+button.p{background:var(--ink);color:#fff}button.s{background:#fff;color:var(--ink)}
+button:focus-visible,.opt:focus-visible{outline:3px solid var(--red);outline-offset:2px}
+button:disabled{opacity:.5;cursor:not-allowed}
+.opt{display:block;width:100%;text-align:left;font:inherit;background:#fff;border:2px solid var(--line);border-radius:8px;padding:12px 14px;margin:8px 0;cursor:pointer}
+.opt:hover:not(:disabled){border-color:var(--ink)}
+.opt.best{border-color:var(--ok);background:#eaf6ee}.opt.mid{border-color:#b98900;background:#fff7dc}.opt.low{border-color:var(--bad);background:#fdecea}.opt.picked{box-shadow:0 0 0 3px var(--ink)}
+.why{font-size:.9rem;color:var(--mute);display:block;margin-top:4px}
+.meta{color:var(--mute);font-size:.9rem}
+.bar{height:8px;background:var(--line);border-radius:4px;overflow:hidden;margin:8px 0 16px}.bar i{display:block;height:100%;background:var(--red);transition:width .3s}
+.timer{font:700 2.4rem Georgia,serif;color:var(--red)}
+video{width:100%;max-height:340px;background:#000;border-radius:8px;transform:scaleX(1)}
+#cam{transform:scaleX(-1)}
+.row{display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-top:12px}
+.stat{display:inline-block;min-width:120px;margin:0 14px 10px 0}.stat b{display:block;font:700 1.5rem Georgia,serif}
+label.ck{display:flex;gap:10px;margin:8px 0;align-items:flex-start;cursor:pointer}
+.tag{display:inline-block;background:var(--yel);padding:1px 8px;border-radius:4px;font-size:.85rem;font-weight:600}
+.warn{border-left:4px solid var(--red);background:#fff;padding:10px 14px;margin:12px 0;font-size:.92rem}
+textarea{width:100%;min-height:90px;font:inherit;padding:10px;border:1px solid var(--line);border-radius:8px}
+@media(prefers-reduced-motion:reduce){*{transition:none!important}}
+</style>
+</head>
+<body>
+<header><b>Shell Graduate: assessment practice</b>
+<nav><button data-v="home" class="on">Start</button><button data-v="vjt">Job try-out</button><button data-v="odvi">Video interview</button><button data-v="res">My scores</button></nav></header>
+<main id="app"></main>
+<script>
+const $=s=>document.querySelector(s),app=$('#app');
+let S={vjt:[],odvi:[]};
+try{S=Object.assign(S,JSON.parse(localStorage.getItem('shellprep')||'{}'))}catch(e){}
+const save=()=>{try{localStorage.setItem('shellprep',JSON.stringify(S))}catch(e){}};
+const shuffle=a=>a.map(x=>[Math.random(),x]).sort((a,b)=>a[0]-b[0]).map(x=>x[1]);
+let timer=null;const stopTimer=()=>{clearInterval(timer);timer=null};
+const mmss=s=>Math.floor(s/60)+':'+String(s%60).padStart(2,'0');
+
+/* ---------- VJT: situational judgement, best=2, partial=1, poor=0 ---------- */
+const V=[
+{t:"Safety",q:"On a site visit you see a contractor working at height without a harness. They say it will only take five minutes and the supervisor is waiting.",o:[
+["Ask them to stop, make sure they are safe, then report it to the site supervisor.",2,"Anyone has the right and duty to stop unsafe work. Safety comes before schedule."],
+["Remind them to be careful and mention it to your manager after the visit.",1,"Right instinct, but the risk is immediate and waiting leaves the person exposed."],
+["Ask a colleague whether this is normal on this site before deciding.",0,"Delays action on a risk that is happening now."],
+["Say nothing. You are a visitor, so it is not your responsibility.",0,"Ignores the duty to intervene on safety."]]},
+{t:"Integrity",q:"A supplier you have worked with for months sends you a gift hamper worth well above company limits, just before a contract renewal decision you influence.",o:[
+["Politely decline or return it, explain the policy, and log it with your manager or compliance.",2,"Protects your independence and keeps a transparent record."],
+["Accept it, but share it with the team so no one person benefits.",1,"Well meant, but it still breaks the gift limit and creates a perceived conflict."],
+["Keep it quietly. It is a thank-you, not a bribe.",0,"Intent does not remove the perceived conflict of interest."],
+["Accept it and give the supplier a slight edge in the renewal to be fair to them.",0,"Directly compromises honesty and fair process."]]},
+{t:"Data",q:"You find that a figure in your team's analysis for a client presentation tomorrow looks wrong. Fixing it may change the headline result and your manager is unavailable.",o:[
+["Verify the figure, document what you found, and message your manager and the analysis owner now with options.",2,"Honest, fast, and keeps the right people informed so they can decide."],
+["Quietly correct it and present the new number without flagging the change.",1,"Corrects the error but removes visibility and accountability."],
+["Present the original and mention the doubt only if someone asks.",0,"Knowingly presenting a number you doubt is not honest."],
+["Pull your section from the presentation without telling anyone.",0,"Creates a new problem and leaves the team unaware."]]},
+{t:"Collaboration",q:"A teammate keeps interrupting in meetings and dismissing a colleague's ideas. The colleague has stopped contributing.",o:[
+["Speak to the teammate privately about the impact, and invite the colleague to share in the next meeting.",2,"Respectful, direct, and restores a safe space for the quiet colleague."],
+["Raise it immediately in front of the whole group to make the point clearly.",1,"May be justified later, but a public call-out usually escalates conflict."],
+["Support the colleague privately but do not address the teammate.",1,"Kind, but the behaviour continues unchecked."],
+["Ignore it. People should speak up for themselves.",0,"Fails the respect-for-people value."]]},
+{t:"Priorities",q:"You have two urgent tasks due today: a routine report for your manager and a request from another team to help fix a problem blocking their project. You cannot finish both.",o:[
+["Tell both parties what you can deliver and when, ask your manager which matters more, and agree a plan.",2,"Transparent trade-offs and the right person deciding priority."],
+["Finish your own report first. It is your assigned work.",1,"Reliable, but ignores the wider impact of the blocked project."],
+["Help the other team and stay silent about the late report.",0,"Hidden slippage damages trust."],
+["Rush both and accept lower quality on each.",0,"Compromises quality and safety of output without telling anyone."]]},
+{t:"Energy transition",q:"Your project team is split. One option is cheaper and faster, the other cuts more emissions but costs more and may miss the deadline. You are asked for input.",o:[
+["Set out costs, emissions and risks of both, recommend based on the project goals, and flag what you would need to meet the deadline.",2,"Evidence-based and honest about trade-offs."],
+["Back the cheaper option. Budgets are what matter most.",1,"Ignores the stated priority of cleaner energy."],
+["Back the lower-emissions option without discussing the cost impact.",1,"Right direction, but incomplete analysis."],
+["Say it is not your call and stay out of it.",0,"Withholds useful input when asked."]]}
+];
+let vq=[],vi=0,vsc=[];
+function vjtIntro(){app.innerHTML=`<h1>Virtual job try-out practice</h1>
+<div class="card"><p>${V.length} workplace scenarios. Pick the most effective response to each. You get feedback on every option so you learn the reasoning, not just the answer. Each scenario has a 90 second limit.</p>
+<div class="warn">This is a practice tool built on the general format of situational judgement tests. It does not contain Shell's real questions or scoring.</div>
+<button class="p" id="go">Start try-out</button></div>`;
+$('#go').onclick=()=>{vq=shuffle(V).map(x=>({...x,o:shuffle(x.o)}));vi=0;vsc=[];vShow()}}
+function vShow(){
+ if(vi>=vq.length)return vDone();
+ const s=vq[vi];let left=90;
+ app.innerHTML=`<div class="meta">Scenario ${vi+1} of ${vq.length} <span class="tag">${s.t}</span></div><div class="bar"><i style="width:${vi/vq.length*100}%"></i></div>
+ <div class="card"><div class="meta" id="tm">Time left 1:30</div><h3>${s.q}</h3><div id="opts">${s.o.map((o,i)=>`<button class="opt" data-i="${i}">${o[0]}</button>`).join('')}</div><div id="fb"></div></div>`;
+ stopTimer();timer=setInterval(()=>{left--;const t=$('#tm');if(t)t.textContent='Time left '+mmss(left);if(left<=0){stopTimer();pick(-1)}},1000);
+ document.querySelectorAll('.opt').forEach(b=>b.onclick=()=>pick(+b.dataset.i));
+ function pick(i){stopTimer();const sc=i<0?0:s.o[i][1];vsc.push(sc);
+  document.querySelectorAll('.opt').forEach((b,k)=>{b.disabled=true;const o=s.o[k];b.classList.add(o[1]==2?'best':o[1]==1?'mid':'low');if(k==i)b.classList.add('picked');b.insertAdjacentHTML('beforeend',`<span class="why">${o[2]}</span>`)});
+  $('#fb').innerHTML=`<div class="row"><b>${i<0?'Time ran out. 0 points.':sc==2?'Best response.':sc==1?'Partly effective.':'Not effective.'}</b><button class="p" id="nx">${vi+1<vq.length?'Next scenario':'See results'}</button></div>`;
+  $('#nx').onclick=()=>{vi++;vShow()}}}
+function vDone(){const max=vq.length*2,tot=vsc.reduce((a,b)=>a+b,0),pct=Math.round(tot/max*100);
+ S.vjt.push({d:new Date().toLocaleDateString(),pct});save();
+ app.innerHTML=`<h1>Try-out finished</h1><div class="card"><div class="stat"><b>${pct}%</b>judgement score</div><div class="stat"><b>${vsc.filter(x=>x==2).length}/${vq.length}</b>best responses</div>
+ <p>${pct>=80?'Strong. You consistently chose safe, honest, respectful actions.':pct>=55?'Decent. Review the partial answers: they usually act, but skip informing the right people or acting at once.':'Revisit the pattern: safety first, be honest, escalate early, and respect others.'}</p>
+ <div class="row"><button class="p" id="re">Retry with new order</button><button class="s" id="nxt">Go to video interview</button></div></div>`;
+ $('#re').onclick=vjtIntro;$('#nxt').onclick=()=>nav('odvi')}
+
+/* ---------- ODVI: record, transcribe, analyse ---------- */
+const Q=[
+"Why Shell, and why this graduate programme?",
+"Tell us about a time you worked in a team to deliver something difficult. What was your role and what was the result?",
+"Describe a situation where you had to do the right thing even though it was uncomfortable or costly.",
+"Tell us about a time you learned something new quickly to solve a problem.",
+"How do you think about the energy transition, and where could you contribute?",
+"Describe a time you spotted a risk or a mistake before it caused harm. What did you do?",
+"Tell us about a time you disagreed with someone and how you handled it."
+];
+const PREP=30,MAXREC=120;
+let stream=null,rec=null,chunks=[],recog=null,tx='',qi=0,qs=[],t0=0;
+const FILL=/\b(um+|uh+|erm|like|you know|basically|actually|kind of|sort of|i mean)\b/gi;
+function odviIntro(){app.innerHTML=`<h1>On-demand video interview practice</h1>
+<div class="card"><p>You get a question, ${PREP} seconds to prepare, then up to ${mmss(MAXREC)} to answer on camera. No re-takes here either: answer once, then review the recording and your analysis.</p>
+<video id="cam" autoplay muted playsinline></video>
+<div class="warn">Your video stays in your browser and is never uploaded. Live transcript works in Chrome and Edge. Without a camera you can still practise with the timer and transcript.</div>
+<div class="row"><button class="p" id="go">Allow camera and start</button></div><div id="err" class="meta"></div></div>`;
+$('#go').onclick=async()=>{try{stream=await navigator.mediaDevices.getUserMedia({video:true,audio:true});$('#cam').srcObject=stream}catch(e){$('#err').textContent='No camera or microphone access. Continuing with timer and transcript only.'}
+ qs=shuffle(Q).slice(0,5);qi=0;setTimeout(prep,stream?600:1200)}}
+function prep(){
+ if(qi>=qs.length)return oDone();
+ let left=PREP;
+ app.innerHTML=`<div class="meta">Question ${qi+1} of ${qs.length}</div><div class="bar"><i style="width:${qi/qs.length*100}%"></i></div>
+ <div class="card"><h3>${qs[qi]}</h3><div class="timer" id="tm">${mmss(left)}</div><div class="meta">Preparation time. Plan a Situation, Task, Action, Result answer.</div>
+ <video id="cam" autoplay muted playsinline></video><div class="row"><button class="s" id="skip">Start answering now</button></div></div>`;
+ if(stream)$('#cam').srcObject=stream;
+ stopTimer();timer=setInterval(()=>{left--;$('#tm').textContent=mmss(left);if(left<=0){stopTimer();record()}},1000);
+ $('#skip').onclick=()=>{stopTimer();record()}}
+function record(){
+ let left=MAXREC;tx='';chunks=[];t0=Date.now();
+ app.innerHTML=`<div class="meta">Question ${qi+1} of ${qs.length}</div><div class="bar"><i style="width:${qi/qs.length*100}%"></i></div>
+ <div class="card"><h3>${qs[qi]}</h3><div class="timer" id="tm">${mmss(left)}</div><div class="meta">Recording. Look at the lens, not at yourself.</div>
+ <video id="cam" autoplay muted playsinline></video><div class="row"><button class="p" id="stop">Finish answer</button></div><p class="meta" id="live"></p></div>`;
+ if(stream){$('#cam').srcObject=stream;try{rec=new MediaRecorder(stream);rec.ondataavailable=e=>chunks.push(e.data);rec.start()}catch(e){rec=null}}
+ const SR=window.SpeechRecognition||window.webkitSpeechRecognition;
+ if(SR){try{recog=new SR();recog.continuous=true;recog.interimResults=true;recog.lang='en-NG';
+  let fin='';recog.onresult=e=>{let it='';for(let i=e.resultIndex;i<e.results.length;i++){const r=e.results[i];if(r.isFinal)fin+=r[0].transcript+' ';else it+=r[0].transcript}tx=fin+it;const l=$('#live');if(l)l.textContent=tx.slice(-160)};
+  recog.onend=()=>{if(recog&&timer)try{recog.start()}catch(e){}};recog.start()}catch(e){recog=null}}
+ stopTimer();timer=setInterval(()=>{left--;$('#tm').textContent=mmss(left);if(left<=0)end()},1000);
+ $('#stop').onclick=end;
+ function end(){stopTimer();const dur=Math.max(1,Math.round((Date.now()-t0)/1000));const r=recog;recog=null;if(r)try{r.stop()}catch(e){}
+  if(rec&&rec.state!=='inactive'){rec.onstop=()=>review(dur,new Blob(chunks,{type:rec.mimeType}));rec.stop()}else review(dur,null)}}
+function analyse(t,dur){
+ const w=t.trim().split(/\s+/).filter(Boolean),n=w.length,fill=(t.match(FILL)||[]).length,
+ nums=(t.match(/\b\d[\d,.%]*\b/g)||[]).length,
+ I=(t.match(/\bI\b/g)||[]).length,we=(t.match(/\b(we|our|us)\b/gi)||[]).length,
+ res=/\b(result|outcome|impact|achieved|reduced|increased|improved|saved|delivered|learned|learnt)\b/i.test(t),
+ act=/\b(I decided|I led|I built|I created|I proposed|I asked|I raised|I organi[sz]ed|I analy[sz]ed|I wrote|I spoke|I took)\b/i.test(t),
+ val=/\b(safe|safety|integrity|honest|respect|collaborat|sustainab|energy transition|innovat|customer|inclusi)\w*/gi,
+ vals=[...new Set((t.match(val)||[]).map(x=>x.toLowerCase()))];
+ return{n,wpm:Math.round(n/dur*60),fill,nums,I,we,res,act,vals,dur}}
+function score(a){const fr=a.fill/Math.max(a.n,1)*100;
+ const p=[['Pace',a.wpm>=120&&a.wpm<=160?20:(a.wpm>=100&&a.wpm<=175)?12:5,20],
+ ['Filler words',fr<=2?15:fr<=4?10:fr<=7?5:0,15],
+ ['Result stated',a.res?20:0,20],
+ ['Personal actions',a.act?15:(a.I>=3?8:0),15],
+ ['Numbers',a.nums>=2?10:a.nums==1?6:0,10],
+ ['Length',a.dur>=75&&a.dur<=120?15:a.dur>=45?10:4,15],
+ ['Values',a.vals.length?5:0,5]];
+ return{t:p.reduce((s,x)=>s+x[1],0),p}}
+function review(dur,blob){
+ const a=analyse(tx,dur),url=blob?URL.createObjectURL(blob):'',hasTx=a.n>5;
+ const tips=[],sk=hasTx?score(a):null,sc=sk?sk.t:null;
+ if(hasTx){
+  if(a.wpm>170)tips.push('You spoke fast ('+a.wpm+' words a minute). Aim for 120 to 160.');
+  if(a.wpm<100)tips.push('Pace was slow ('+a.wpm+' wpm). Tighten your points.');
+  if(a.fill>4)tips.push(a.fill+' filler words. Pause silently instead.');
+  if(!a.res)tips.push('No clear result. End with what changed and what you learned.');
+  if(!a.act)tips.push('Few "I did" actions. Say what you personally did.');
+  if(a.nums<1)tips.push('Add a number: time, cost, people, percentage.');
+  if(a.we>a.I*2&&a.I<4)tips.push('Mostly "we". Make your own contribution clear.');
+  if(a.dur<45)tips.push('Under 45 seconds is thin. Aim for 90 to 120.');
+  if(!tips.length)tips.push('Solid structure and delivery on the measurable points.');
+ }else tips.push('No transcript captured (browser or mic). Use the checklist below and watch the recording.');
+ app.innerHTML=`<div class="meta">Question ${qi+1} of ${qs.length} review</div>
+ <div class="card"><h3>${qs[qi]}</h3>${url?`<video controls src="${url}"></video>`:''}
+ <p>${sc!==null?`<span class="stat"><b>${sc}/100</b>score</span>`:''}<span class="stat"><b>${mmss(a.dur)}</b>length</span>${hasTx?`<span class="stat"><b>${a.wpm}</b>words/min</span><span class="stat"><b>${a.fill}</b>fillers</span><span class="stat"><b>${a.nums}</b>numbers cited</span>`:''}</p>
+ ${hasTx?`<p class="meta">Values you mentioned: ${a.vals.length?a.vals.join(', '):'none. Link your answer to safety, integrity, respect or sustainability where it is genuine.'}</p>`:''}
+ ${sk?`<p class="meta">${sk.p.map(x=>x[0]+' '+x[1]+'/'+x[2]).join(', ')}</p>`:''}
+ <h3>Automatic feedback</h3><ul>${tips.map(t=>`<li>${t}</li>`).join('')}</ul>
+ <h3>Rate yourself honestly</h3>
+ ${['Opened with the point, not background','Clear Situation, Task, Action, Result','My own actions were specific','Result and learning stated','Eye contact, calm pace, clear audio'].map((c,i)=>`<label class="ck"><input type="checkbox" class="sc"> ${c}</label>`).join('')}
+ <div class="row"><button class="p" id="nx">${qi+1<qs.length?'Next question':'Finish'}</button></div></div>`;
+ $('#nx').onclick=()=>{const self=document.querySelectorAll('.sc:checked').length;S.odvi.push({q:qs[qi],self,wpm:a.wpm,fill:a.fill,dur:a.dur,auto:sc,d:new Date().toLocaleDateString()});save();qi++;prep()}}
+function oDone(){if(stream){stream.getTracks().forEach(t=>t.stop());stream=null}
+ const l=S.odvi.slice(-qs.length),au=l.filter(x=>x.auto!=null),aavg=au.length?Math.round(au.reduce((s,x)=>s+x.auto,0)/au.length):null,avg=(l.reduce((a,b)=>a+b.self,0)/l.length/5*100).toFixed(0);
+ app.innerHTML=`<h1>Interview practice finished</h1><div class="card">${aavg!==null?`<div class="stat"><b>${aavg}/100</b>measured score</div>`:''}<div class="stat"><b>${avg}%</b>self-rated quality</div>
+ <p>Re-run to get a fresh set of questions, and compare your scores on the My scores tab. Practising with different stories each time keeps answers natural.</p>
+ <div class="row"><button class="p" id="re">Another round</button><button class="s" id="rs">My scores</button></div></div>`;
+ $('#re').onclick=odviIntro;$('#rs').onclick=()=>nav('res')}
+
+/* ---------- Home and results ---------- */
+function home(){app.innerHTML=`<h1>Practise the Shell online assessments</h1>
+<div class="card"><p>Shell's first stage has two parts: a <b>Virtual Job Try-out</b> (workplace scenarios) and an <b>On-Demand Video Interview</b> (recorded answers). Your results are valid for 10 months, and the invite gives you 7 days, so practise here first and take the real one once.</p>
+<div class="row"><button class="p" data-go="vjt">Job try-out</button><button class="s" data-go="odvi">Video interview</button></div></div>
+<div class="card"><h3>What to keep in mind</h3><ul><li>Safety and honesty beat speed. When unsure, stop, report, and ask.</li><li>Use real stories with a clear result and numbers.</li><li>Test camera, light, audio and internet before the real session.</li><li>Do not retake the real assessments: repeats can hurt your standing.</li></ul></div>
+<p class="meta">Independent practice tool. Not affiliated with or endorsed by Shell. Questions and scoring are original and do not reflect Shell's real content.</p>`;
+document.querySelectorAll('[data-go]').forEach(b=>b.onclick=()=>nav(b.dataset.go))}
+function results(){const v=S.vjt.slice(-8),o=S.odvi.slice(-10),au=S.odvi.filter(x=>x.auto!=null).slice(-20);
+ app.innerHTML=`<h1>My scores</h1><div class="card"><h3>Job try-out attempts</h3>${v.length?v.map(x=>`<div>${x.d}: ${x.pct}%<div class="bar"><i style="width:${x.pct}%"></i></div></div>`).join(''):'<p class="meta">No attempts yet. Start the job try-out.</p>'}</div>
+ <div class="card"><h3>Interview score trend</h3>${au.length?`<div style="display:flex;align-items:flex-end;gap:4px;height:100px">${au.map(x=>`<div title="${x.auto}" style="flex:1;background:var(--red);height:${x.auto}%"></div>`).join('')}</div><p class="meta">Last ${au.length} answers, oldest to newest. Average ${Math.round(au.reduce((s,x)=>s+x.auto,0)/au.length)}/100.</p>`:'<p class="meta">Scores appear after answers with a transcript.</p>'}</div>
+ <div class="card"><h3>Recent interview answers</h3>${o.length?o.map(x=>`<p><b>${x.auto!=null?x.auto+'/100':'n/a'}</b> measured, <b>${x.self}/5</b> self-rated, ${mmss(x.dur)}, ${x.fill} fillers<br><span class="meta">${x.q}</span></p>`).join(''):'<p class="meta">No answers yet. Start the video interview.</p>'}</div>
+ <button class="s" id="clr">Clear my data</button>`;
+ $('#clr').onclick=()=>{S={vjt:[],odvi:[]};save();results()}}
+function nav(v){stopTimer();if(stream&&v!=='odvi'){stream.getTracks().forEach(t=>t.stop());stream=null}
+ document.querySelectorAll('nav button').forEach(b=>b.classList.toggle('on',b.dataset.v===v));
+ ({home,vjt:vjtIntro,odvi:odviIntro,res:results})[v]();window.scrollTo(0,0)}
+document.querySelectorAll('nav button').forEach(b=>b.onclick=()=>nav(b.dataset.v));
+home();
+</script>
+</body>
+</html>
